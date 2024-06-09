@@ -11,6 +11,28 @@ async def test_create():
     assert 'created_on' in result
     assert result['completed_on'] is None
     assert result['is_completed'] is False
+    
+@pytest.mark.asyncio
+async def test_delete():
+    app = TodoApp.new()
+    task = await app.create('Task 1')
+    task_id = task['id']
+    result = await app.delete(task_id)
+    assert result is True
+    assert task_id not in [task['id'] for task in app.todo_list]
+  
+    
+
+@pytest.mark.asyncio
+async def test_fake_delete():
+    app = TodoApp.new()
+    task = await app.create('Task 2')
+    fake_task_id = '2345345345jhbh534hu5'
+    result = await app.delete(fake_task_id)
+    assert result is False
+    assert task['id'] in [task['id'] for task in app.todo_list]
+
+
 
 @pytest.mark.asyncio
 async def test_update():
@@ -21,14 +43,16 @@ async def test_update():
     assert updated_task['description'] == 'Updated Task 1'
     assert updated_task['id'] == task_id
 
+
+
 @pytest.mark.asyncio
-async def test_delete():
+async def test_fake_update():
     app = TodoApp.new()
-    task = await app.create('Task 1')
-    task_id = task['id']
-    result = await app.delete(task_id)
-    assert result is True
-    assert task_id not in [task['id'] for task in app.todo_list]
+    task_id = task_id = '2345345345jhbh534hu5'
+    updated_task = await app.update(task_id, 'Updated Task 1')
+    assert updated_task is None
+    
+    
 
 @pytest.mark.asyncio
 async def test_complete():
@@ -39,6 +63,28 @@ async def test_complete():
     assert completed_task['completed_on'] is not None
     assert completed_task['is_completed'] is True
 
+
+
+@pytest.mark.asyncio
+async def test_complete():
+    app = TodoApp.new()
+    task_id = task_id = '2345345345jhbh534hu5'
+    completed_task = await app.complete(task_id)
+    assert completed_task is None
+    
+
+
+@pytest.mark.asyncio
+async def test_already_completed_task():
+    app = TodoApp.new()
+    task = await app.create('Task 1')
+    task_id = task['id']
+    await app.complete(task_id)
+    completed_task = await app.complete(task_id)
+    assert completed_task['completed_on'] is not None
+    assert completed_task['is_completed'] is True
+    
+
 @pytest.mark.asyncio
 async def test_filter_completed():
     app = TodoApp.new()
@@ -48,6 +94,7 @@ async def test_filter_completed():
     completed_tasks = await app.filter('completed')
     assert len(completed_tasks) == 1
     assert completed_tasks[0]['id'] == task1['id']
+    
 
 @pytest.mark.asyncio
 async def test_filter_todo():
@@ -58,6 +105,7 @@ async def test_filter_todo():
     todo_tasks = await app.filter('todo')
     assert len(todo_tasks) == 1
     assert todo_tasks[0]['id'] == task2['id']
+    
 
 @pytest.mark.asyncio
 async def test_filter_text_search():
@@ -69,3 +117,22 @@ async def test_filter_text_search():
     assert len(search_results) == 2
     assert task1 in search_results
     assert task3 in search_results
+    
+    
+@pytest.mark.asyncio
+async def test_filter_text_not_found():
+    app = TodoApp.new()
+    await app.create('Buy groceries')
+    await app.create('Clean the house')
+    search_results = await app.filter('Nonexistent task')
+    assert len(search_results) == 0
+    
+    
+
+@pytest.mark.asyncio
+async def test_filter_special_characters():
+    app = TodoApp.new()
+    await app.create('Buy groceries')
+    await app.create('Clean the house')
+    search_results = await app.filter('1234!@#$')
+    assert len(search_results) == 0
